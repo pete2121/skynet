@@ -1,8 +1,13 @@
 # SKYNET QA Automation Helper
 
+<p align="center">
+  <img src="assets/eyelogo.png" width="400">
+</p>
+
 A lightweight browser automation helper for quick UI testing directly from the browser.
 
 Inspired by the idea of a small autonomous testing system, this tool allows developers and QA engineers to run quick checks without installing heavy frameworks.
+
 
 ## Features
 
@@ -31,3 +36,4 @@ skynet.get('h1').shouldContainText('Dashboard')
 
 skynet.report()
 
+![Skynet Report](assets/report.png)
