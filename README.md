@@ -1,7 +1,7 @@
 # SKYNET QA Automation Helper
 
 <p align="center">
-  <img src="assets/eyelogo.png" width="400">
+  <img src="/src/assets/eyelogo.png" width="400">
 </p>
 
 A lightweight browser automation helper for quick UI testing directly from the browser.
@@ -36,4 +36,6 @@ skynet.get('h1').shouldContainText('Dashboard')
 
 skynet.report()
 
-![Skynet Report](assets/report.png)
+<p align="center">
+  <img src="/src/assets/report.png" width="400">
+</p>
