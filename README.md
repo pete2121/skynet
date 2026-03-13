@@ -1,7 +1,7 @@
 # SKYNET QA Automation Helper
 
 <p align="center">
-  <img src="/src/assets/eyelogo.png" width="400">
+  <img src="/src/assets/eyelogo.png" width="1000">
 </p>
 
 A lightweight browser automation helper for quick UI testing directly from the browser.
