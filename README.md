@@ -40,5 +40,5 @@ skynet.report()
 ```
 
 <p align="center">
-  <img src="/src/assets/report.png" width="400">
+  <img src="/src/assets/report.png" width="1000">
 </p>
