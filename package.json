@@ -1,0 +1,11 @@
+{
+  "name": "skynet",
+  "version": "1.0.0",
+  "description": "Lightweight browser UI automation helper bookmarklet",
+  "main": "src/skynet.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Petros Plakogiannis",
+  "license": "ISC"
+}
