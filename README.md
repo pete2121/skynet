@@ -36,6 +36,9 @@ skynet.get('h1').shouldContainText('Dashboard')
 
 skynet.report()
 
+
+```
+
 <p align="center">
   <img src="/src/assets/report.png" width="400">
 </p>
