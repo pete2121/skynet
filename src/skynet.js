@@ -35,6 +35,10 @@
   }
 
   const results = [];
+  const recordedActions = [];
+  let isRecording = false;
+  let recordingListenersAttached = false;
+  let lastHighlightedElement = null;
 
   function addResult(status, test, details) {
     results.push({
@@ -139,6 +143,298 @@
     });
   }
 
+  function cssPath(element) {
+    if (!element || element.nodeType !== 1) {
+      return "";
+    }
+
+    if (element.id) {
+      return "#" + element.id;
+    }
+
+    const path = [];
+
+    while (element && element.nodeType === 1 && element !== document.body) {
+      let selector = element.nodeName.toLowerCase();
+
+      if (element.className && typeof element.className === "string") {
+        const className = element.className
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .join(".");
+        if (className) {
+          selector += "." + className;
+        }
+      }
+
+      const parent = element.parentNode;
+      if (parent) {
+        const siblings = Array.from(parent.children).filter(function (child) {
+          return child.nodeName === element.nodeName;
+        });
+
+        if (siblings.length > 1) {
+          const index = siblings.indexOf(element) + 1;
+          selector += ":nth-of-type(" + index + ")";
+        }
+      }
+
+      path.unshift(selector);
+      element = element.parentNode;
+    }
+
+    return path.join(" > ");
+  }
+
+  function highlightElement(element) {
+    if (!element) {
+      return;
+    }
+
+    if (lastHighlightedElement && lastHighlightedElement !== element) {
+      lastHighlightedElement.style.outline =
+        lastHighlightedElement.__skynetOldOutline || "";
+      lastHighlightedElement.style.outlineOffset =
+        lastHighlightedElement.__skynetOldOutlineOffset || "";
+    }
+
+    element.__skynetOldOutline = element.style.outline;
+    element.__skynetOldOutlineOffset = element.style.outlineOffset;
+
+    element.style.outline = "3px solid #ff3b3b";
+    element.style.outlineOffset = "2px";
+
+    lastHighlightedElement = element;
+
+    setTimeout(function () {
+      if (element === lastHighlightedElement) {
+        element.style.outline = element.__skynetOldOutline || "";
+        element.style.outlineOffset =
+          element.__skynetOldOutlineOffset || "";
+      }
+    }, 1400);
+  }
+
+  function loadScreenshotSupport() {
+    return new Promise(function (resolve, reject) {
+      if (window.html2canvas) {
+        resolve(true);
+        return;
+      }
+
+      if (document.getElementById("skynet-html2canvas-loader")) {
+        const existing = document.getElementById("skynet-html2canvas-loader");
+        existing.addEventListener("load", function () {
+          resolve(true);
+        });
+        existing.addEventListener("error", function () {
+          reject(new Error("Failed to load html2canvas"));
+        });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = "skynet-html2canvas-loader";
+      script.src =
+        "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+      script.onload = function () {
+        console.log("✅ html2canvas loaded");
+        resolve(true);
+      };
+      script.onerror = function () {
+        console.error("❌ Failed to load html2canvas");
+        reject(new Error("Failed to load html2canvas"));
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  async function captureFailureEvidence(selector, element, extra) {
+    const payload = {
+      selector: selector || "",
+      url: location.href,
+      route: location.hash || "",
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+      timestamp: new Date().toISOString(),
+      extra: extra || {},
+    };
+
+    if (element) {
+      payload.html = (element.outerHTML || "").slice(0, 2000);
+      payload.text = (element.innerText || element.textContent || "").slice(
+        0,
+        1000
+      );
+    }
+
+    if (window.html2canvas) {
+      try {
+        const canvas = await window.html2canvas(document.body, {
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+        payload.screenshot = canvas.toDataURL("image/png");
+      } catch (error) {
+        payload.screenshotError = String(error);
+      }
+    } else {
+      payload.screenshotError =
+        "html2canvas not loaded - run await skynet.loadScreenshotSupport()";
+    }
+
+    return payload;
+  }
+
+  function recordAction(action) {
+    if (!isRecording) {
+      return;
+    }
+
+    recordedActions.push({
+      ...action,
+      time: new Date().toLocaleTimeString(),
+      route: location.hash || "",
+      url: location.href,
+    });
+  }
+
+  function attachRecordingListeners() {
+    if (recordingListenersAttached) {
+      return;
+    }
+
+    document.addEventListener(
+      "click",
+      function (event) {
+        if (!isRecording) {
+          return;
+        }
+
+        const selector = cssPath(event.target);
+        recordAction({
+          type: "click",
+          selector: selector,
+          code: "skynet.get(" + JSON.stringify(selector) + ").click();",
+        });
+      },
+      true
+    );
+
+    document.addEventListener(
+      "change",
+      function (event) {
+        if (!isRecording) {
+          return;
+        }
+
+        const target = event.target;
+        const selector = cssPath(target);
+
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.tagName === "SELECT")
+        ) {
+          if (target.type === "checkbox" || target.type === "radio") {
+            recordAction({
+              type: "check",
+              selector: selector,
+              value: !!target.checked,
+              code:
+                "skynet.get(" +
+                JSON.stringify(selector) +
+                ").shouldBeChecked(" +
+                (!!target.checked) +
+                ");",
+            });
+          } else {
+            recordAction({
+              type: "type",
+              selector: selector,
+              value: target.value,
+              code:
+                "skynet.get(" +
+                JSON.stringify(selector) +
+                ").type(" +
+                JSON.stringify(target.value) +
+                ");",
+            });
+          }
+        }
+      },
+      true
+    );
+
+    recordingListenersAttached = true;
+  }
+
+  function startRecording() {
+    attachRecordingListeners();
+    recordedActions.length = 0;
+    isRecording = true;
+    console.log("🔴 SKYNET recording started");
+    addResult("PASS", "Recording started", "User action recording enabled");
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    console.log("⏹ SKYNET recording stopped");
+    addResult("PASS", "Recording stopped", {
+      totalActions: recordedActions.length,
+    });
+  }
+
+  function generateRecordedTest() {
+    const lines = [
+      "async function recordedTest(){",
+      "  try {",
+    ];
+
+    recordedActions.forEach(function (action) {
+      lines.push("    " + action.code);
+    });
+
+    lines.push("    skynet.report();");
+    lines.push("  } catch (error) {");
+    lines.push('    console.error("Recorded test failed:", error);');
+    lines.push("  }");
+    lines.push("}");
+    lines.push("");
+    lines.push("recordedTest();");
+
+    return lines.join("\n");
+  }
+
+  function exportRecordedTest() {
+    const code = generateRecordedTest();
+    downloadFile(
+      "skynet-recorded-test.js",
+      code,
+      "text/javascript;charset=utf-8"
+    );
+    return code;
+  }
+
+  async function copyRecordedTest() {
+    const code = generateRecordedTest();
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(code);
+      console.log("📋 Recorded test copied to clipboard");
+      return code;
+    }
+
+    console.warn("Clipboard API not available");
+    return code;
+  }
+
   function report() {
     const pass = results.filter(function (x) {
       return x.status === "PASS";
@@ -161,6 +457,22 @@
 
     const rows = results
       .map(function (result, index) {
+        const detailsObject =
+          typeof result.details === "string"
+            ? result.details
+            : JSON.stringify(result.details, null, 2);
+
+        const screenshotHtml =
+          result.details &&
+          typeof result.details === "object" &&
+          result.details.screenshot
+            ? '<div style="margin-top:8px"><a href="' +
+              result.details.screenshot +
+              '" target="_blank"><img src="' +
+              result.details.screenshot +
+              '" style="max-width:220px;border:1px solid #4a1717;border-radius:8px" /></a></div>'
+            : "";
+
         return (
           "<tr>" +
           "<td>" +
@@ -174,13 +486,11 @@
           "<td>" +
           escapeHtml(result.test) +
           "</td>" +
-          "<td><pre style=\"white-space:pre-wrap;margin:0;font-family:inherit\">" +
-          escapeHtml(
-            typeof result.details === "string"
-              ? result.details
-              : JSON.stringify(result.details, null, 2)
-          ) +
-          "</pre></td>" +
+          '<td><pre style="white-space:pre-wrap;margin:0;font-family:inherit">' +
+          escapeHtml(detailsObject) +
+          "</pre>" +
+          screenshotHtml +
+          "</td>" +
           "<td>" +
           escapeHtml(result.time) +
           "</td>" +
@@ -296,9 +606,9 @@
       <button onclick="window.print()">Print / Save PDF</button>
       <button onclick="downloadJSON()">Export JSON</button>
       <button onclick="downloadCSV()">Export CSV</button>
-      <button class="secondary" onclick="showTab('table')">Table</button>
-      <button class="secondary" onclick="showTab('json')">JSON</button>
-      <button class="secondary" onclick="showTab('csv')">CSV</button>
+      <button onclick="showTab('table')" class="secondary">Table</button>
+      <button onclick="showTab('json')" class="secondary">JSON</button>
+      <button onclick="showTab('csv')" class="secondary">CSV</button>
     </div>
 
     <div id="panel-table" class="panel active">
@@ -471,6 +781,15 @@
 
   function createMissingApi(selector) {
     return {
+      highlight: function () {
+        console.error("❌ FAIL - element not found:", selector);
+        addResult("FAIL", "Element " + selector + " highlight", {
+          expected: "found",
+          actual: "not found",
+        });
+        return this;
+      },
+
       click: function () {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " exists", {
@@ -489,7 +808,7 @@
         return this;
       },
 
-      shouldContainText: function (text) {
+      shouldContainText: async function (text) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should contain text", {
           expected: text,
@@ -498,7 +817,7 @@
         return this;
       },
 
-      shouldHaveText: function (text) {
+      shouldHaveText: async function (text) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should have text", {
           expected: text,
@@ -507,7 +826,7 @@
         return this;
       },
 
-      shouldContainValue: function (value) {
+      shouldContainValue: async function (value) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should contain value", {
           expected: value,
@@ -516,7 +835,7 @@
         return this;
       },
 
-      shouldHaveValue: function (value) {
+      shouldHaveValue: async function (value) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should have value", {
           expected: value,
@@ -525,7 +844,7 @@
         return this;
       },
 
-      shouldBeChecked: function (expected) {
+      shouldBeChecked: async function (expected) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " checked state", {
           expected: expected,
@@ -534,7 +853,7 @@
         return this;
       },
 
-      shouldBeTrue: function () {
+      shouldBeTrue: async function () {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should be checked", {
           expected: true,
@@ -543,7 +862,7 @@
         return this;
       },
 
-      shouldBeFalse: function () {
+      shouldBeFalse: async function () {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should be unchecked", {
           expected: false,
@@ -556,23 +875,54 @@
 
   function createElementApi(selector, element) {
     return {
+      highlight: function () {
+        highlightElement(element);
+        addResult("PASS", "Element " + selector + " highlighted", selector);
+        return this;
+      },
+
       click: function () {
         console.log("Click:", selector);
+        highlightElement(element);
         element.click();
+
         addResult("PASS", "Element " + selector + " clicked", "click executed");
+
+        recordAction({
+          type: "click",
+          selector: selector,
+          code: "skynet.get(" + JSON.stringify(selector) + ").click();",
+        });
+
         return this;
       },
 
       type: function (value) {
         console.log("Type:", value);
+        highlightElement(element);
         element.value = value;
         element.dispatchEvent(new Event("input", { bubbles: true }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
+
         addResult("PASS", "Element " + selector + " typed value", value);
+
+        recordAction({
+          type: "type",
+          selector: selector,
+          value: value,
+          code:
+            "skynet.get(" +
+            JSON.stringify(selector) +
+            ").type(" +
+            JSON.stringify(value) +
+            ");",
+        });
+
         return this;
       },
 
-      shouldContainText: function (text) {
+      shouldContainText: async function (text) {
+        highlightElement(element);
         const ok = (element.textContent || "").includes(text);
 
         if (ok) {
@@ -580,16 +930,20 @@
           addResult("PASS", "Element " + selector + " should contain text", text);
         } else {
           console.error("❌ FAIL - text does not contain:", text);
-          addResult("FAIL", "Element " + selector + " should contain text", {
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: text,
             actual: element.textContent,
+            assertion: "shouldContainText",
           });
+
+          addResult("FAIL", "Element " + selector + " should contain text", evidence);
         }
 
         return this;
       },
 
-      shouldHaveText: function (text) {
+      shouldHaveText: async function (text) {
+        highlightElement(element);
         const ok = (element.textContent || "") === text;
 
         if (ok) {
@@ -597,16 +951,20 @@
           addResult("PASS", "Element " + selector + " should have text", text);
         } else {
           console.error("❌ FAIL - text not equal:", text);
-          addResult("FAIL", "Element " + selector + " should have text", {
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: text,
             actual: element.textContent,
+            assertion: "shouldHaveText",
           });
+
+          addResult("FAIL", "Element " + selector + " should have text", evidence);
         }
 
         return this;
       },
 
-      shouldContainValue: function (value) {
+      shouldContainValue: async function (value) {
+        highlightElement(element);
         const ok = String(element.value || "").includes(value);
 
         if (ok) {
@@ -614,16 +972,20 @@
           addResult("PASS", "Element " + selector + " should contain value", value);
         } else {
           console.error("❌ FAIL - value does not contain:", value);
-          addResult("FAIL", "Element " + selector + " should contain value", {
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: value,
             actual: element.value,
+            assertion: "shouldContainValue",
           });
+
+          addResult("FAIL", "Element " + selector + " should contain value", evidence);
         }
 
         return this;
       },
 
-      shouldHaveValue: function (value) {
+      shouldHaveValue: async function (value) {
+        highlightElement(element);
         const ok = element.value === value;
 
         if (ok) {
@@ -631,16 +993,20 @@
           addResult("PASS", "Element " + selector + " should have value", value);
         } else {
           console.error("❌ FAIL - value not equal:", value);
-          addResult("FAIL", "Element " + selector + " should have value", {
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: value,
             actual: element.value,
+            assertion: "shouldHaveValue",
           });
+
+          addResult("FAIL", "Element " + selector + " should have value", evidence);
         }
 
         return this;
       },
 
-      shouldBeChecked: function (expected) {
+      shouldBeChecked: async function (expected) {
+        highlightElement(element);
         const value = typeof expected === "boolean" ? expected : true;
         const ok = element.checked === value;
 
@@ -652,16 +1018,21 @@
             expected: value,
             actual: element.checked,
           });
-          addResult("FAIL", "Element " + selector + " checked state", {
+
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: value,
             actual: element.checked,
+            assertion: "shouldBeChecked",
           });
+
+          addResult("FAIL", "Element " + selector + " checked state", evidence);
         }
 
         return this;
       },
 
-      shouldBeTrue: function () {
+      shouldBeTrue: async function () {
+        highlightElement(element);
         const ok = element.checked === true;
 
         if (ok) {
@@ -671,16 +1042,21 @@
           console.error("❌ FAIL - checked is not true", {
             actual: element.checked,
           });
-          addResult("FAIL", "Element " + selector + " should be checked", {
+
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: true,
             actual: element.checked,
+            assertion: "shouldBeTrue",
           });
+
+          addResult("FAIL", "Element " + selector + " should be checked", evidence);
         }
 
         return this;
       },
 
-      shouldBeFalse: function () {
+      shouldBeFalse: async function () {
+        highlightElement(element);
         const ok = element.checked === false;
 
         if (ok) {
@@ -690,10 +1066,14 @@
           console.error("❌ FAIL - checked is not false", {
             actual: element.checked,
           });
-          addResult("FAIL", "Element " + selector + " should be unchecked", {
+
+          const evidence = await captureFailureEvidence(selector, element, {
             expected: false,
             actual: element.checked,
+            assertion: "shouldBeFalse",
           });
+
+          addResult("FAIL", "Element " + selector + " should be unchecked", evidence);
         }
 
         return this;
@@ -703,13 +1083,20 @@
 
   window.skynet = {
     results: results,
+    recordedActions: recordedActions,
     report: report,
     exportJSON: exportJSON,
     exportCSV: exportCSV,
     waitFor: waitFor,
+    loadScreenshotSupport: loadScreenshotSupport,
+    startRecording: startRecording,
+    stopRecording: stopRecording,
+    exportRecordedTest: exportRecordedTest,
+    copyRecordedTest: copyRecordedTest,
 
     clearResults: function () {
       results.length = 0;
+      recordedActions.length = 0;
       console.log("SKYNET results cleared");
     },
 
@@ -727,7 +1114,20 @@
       const element = document.querySelector(selector);
 
       return {
-        shouldMatchData: function (expected) {
+        highlight: function () {
+          if (element) {
+            highlightElement(element);
+            addResult("PASS", "Table " + selector + " highlighted", selector);
+          } else {
+            addResult("FAIL", "Table " + selector + " highlighted", {
+              expected: "found",
+              actual: "not found",
+            });
+          }
+          return this;
+        },
+
+        shouldMatchData: async function (expected) {
           if (!element) {
             console.error("❌ FAIL - table not found:", selector);
             addResult("FAIL", "Table " + selector + " should exist", {
@@ -736,6 +1136,8 @@
             });
             return this;
           }
+
+          highlightElement(element);
 
           const actual = extractTableData(element);
           const ok = sameData(actual, expected);
@@ -748,10 +1150,14 @@
               expected: expected,
               actual: actual,
             });
-            addResult("FAIL", "Table " + selector + " should match data", {
+
+            const evidence = await captureFailureEvidence(selector, element, {
               expected: expected,
               actual: actual,
+              assertion: "table.shouldMatchData",
             });
+
+            addResult("FAIL", "Table " + selector + " should match data", evidence);
           }
 
           return this;

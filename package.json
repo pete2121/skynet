@@ -4,8 +4,12 @@
   "description": "Lightweight browser UI automation helper bookmarklet",
   "main": "src/skynet.js",
   "scripts": {
-    "test": "test"
+    "build": "terser src/skynet.js -c -m -o dist/skynet.min.js && node scripts/make-bookmarklet.js",
+    "test": "echo \"No tests yet\""
   },
   "author": "Petros Plakogiannis",
-  "license": "ISC"
+  "license": "MIT",
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
 }
