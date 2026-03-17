@@ -75,6 +75,28 @@ SKYNET will load and you can run commands directly from the browser console.
 
 ---
 
+## Limitations & Notes
+
+SKYNET is optimized for fast, lightweight UI testing directly in the browser.
+
+### Best used with
+- Single Page Applications (SPA)
+- Modern frontend frameworks (React, Angular, Vue)
+- Debugging and exploratory testing workflows
+
+### Keep in mind
+- Page reloads will reset SKYNET (as it runs in-browser)
+- Dynamic content may require `waitFor`
+- SKYNET is not a replacement for full E2E frameworks like Cypress or Playwright
+
+### Tip
+
+If elements are not found immediately, use:
+
+~~~javascript
+await skynet.waitFor('#selector') 
+~~~
+
 ## Example
 
 ~~~javascript
@@ -98,7 +120,6 @@ loginTest();
 </p>
 
 ---
-
 ## API
 
 ### Element Selection
