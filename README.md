@@ -4,9 +4,12 @@
   <img src="./src/assets/eyelogo.png" width="1000">
 </p>
 
-A lightweight browser automation helper for quick UI testing directly from the browser.
+## What is SKYNET?
 
-Inspired by the idea of a small autonomous testing system, SKYNET allows developers and QA engineers to run quick checks without installing heavy frameworks.
+SKYNET is a lightweight browser automation helper that lets you run UI tests instantly — directly from the browser console or a bookmarklet.
+
+No installation. No frameworks. Just run.
+
 
 ![Version](https://img.shields.io/badge/version-1.0-red)
 ![License](https://img.shields.io/badge/license-MIT-blue)
