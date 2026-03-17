@@ -16,7 +16,17 @@ No installation. No frameworks. Just run.
 ![JavaScript](https://img.shields.io/badge/javascript-automation-yellow)
 
 ---
+## Demo
 
+<p align="center">
+  <b>Run UI tests instantly from your browser</b>
+</p>
+
+<p align="center">
+  <img src="./src/assets/demo.gif" width="900">
+</p>
+
+---
 ## Features
 
 - DOM interaction helpers
