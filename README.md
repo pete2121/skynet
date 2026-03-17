@@ -240,8 +240,8 @@ Checks if a table matches expected data.
 
 ~~~javascript
 await skynet.table('#users').shouldMatchData([
-  ['John', 'Admin'],
-  ['Anna', 'User']
+  ['Petros', 'Admin'],
+  ['Plak', 'User']
 ])
 ~~~
 
