@@ -27,4 +27,4 @@ Please include:
 
 Thank you for helping improve the security of Skynet 
 
-Petrosd
+Petros
