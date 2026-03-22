@@ -425,13 +425,51 @@
   async function copyRecordedTest() {
     const code = generateRecordedTest();
 
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(code);
-      console.log("📋 Recorded test copied to clipboard");
-      return code;
+    // 1. Modern Clipboard API
+    try {
+      if (
+        navigator.clipboard &&
+        navigator.clipboard.writeText &&
+        document.hasFocus()
+      ) {
+        await navigator.clipboard.writeText(code);
+        console.log("📋 SKYNET - Recorded test copied to clipboard");
+        return code;
+      } else {
+        console.warn(
+          "⚠️ Clipboard API not available or document is not focused"
+        );
+      }
+    } catch (error) {
+      console.warn("⚠️ Clipboard API failed:", error);
     }
 
-    console.warn("Clipboard API not available");
+    // 2. Fallback using execCommand
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = code;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "-9999px";
+
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      const successful = document.execCommand("copy");
+      document.body.removeChild(textarea);
+
+      if (successful) {
+        console.log("📋 SKYNET - Copied using fallback method");
+        return code;
+      }
+    } catch (error) {
+      console.warn("⚠️ Fallback copy failed:", error);
+    }
+
+    // 3. Final fallback
+    window.prompt("Copy your recorded test manually:", code);
     return code;
   }
 
