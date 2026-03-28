@@ -1119,6 +1119,71 @@
     };
   }
 
+function terminatorMode() {
+  if (document.getElementById("skynet-terminator-mode")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "skynet-terminator-mode";
+  overlay.style.cssText =
+    "position:fixed;inset:0;background:rgba(0,0,0,0.94);z-index:9999999;overflow:hidden;font-family:Consolas,monospace;color:#ff3b3b;";
+
+  const center = document.createElement("div");
+  center.style.cssText =
+    "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:30px;";
+
+  const eyeWrap = document.createElement("div");
+  eyeWrap.style.cssText =
+    "position:relative;width:220px;height:220px;";
+
+  const ring = document.createElement("div");
+  ring.style.cssText =
+    "position:absolute;inset:0;border:3px solid rgba(255,59,59,.45);border-radius:50%;animation:skynetRotate 4s linear infinite;box-shadow:0 0 20px rgba(255,0,0,.35);";
+
+  const eye = document.createElement("div");
+  eye.style.cssText =
+    "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#ffd0d0 0,#ff4a4a 12%,#ff0000 28%,#450000 45%,#0c0000 65%,transparent 68%);box-shadow:0 0 18px #ff0000,0 0 50px rgba(255,0,0,.9),inset 0 0 18px rgba(255,255,255,.25);animation:skynetPulse 1.2s ease-in-out infinite;";
+
+  const title = document.createElement("div");
+  title.innerText = "SKYNET";
+  title.style.cssText =
+    "font-size:64px;font-weight:bold;letter-spacing:6px;text-shadow:0 0 20px #ff0000;";
+
+  const subtitle = document.createElement("div");
+  subtitle.innerText = "TERMINATOR MODE ACTIVATED";
+  subtitle.style.cssText =
+    "font-size:24px;letter-spacing:4px;color:#ff9c9c;";
+
+  const small = document.createElement("div");
+  small.innerText = "TARGET LOCK • AUTOMATION ONLINE";
+  small.style.cssText =
+    "font-size:14px;color:#ff7777;letter-spacing:2px;";
+
+  eyeWrap.appendChild(ring);
+  eyeWrap.appendChild(eye);
+
+  center.appendChild(eyeWrap);
+  center.appendChild(title);
+  center.appendChild(subtitle);
+  center.appendChild(small);
+
+  overlay.appendChild(center);
+
+  if (!document.getElementById("skynet-terminator-style")) {
+    const style = document.createElement("style");
+    style.id = "skynet-terminator-style";
+    style.textContent =
+      "@keyframes skynetPulse{0%,100%{opacity:.75;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}" +
+      "@keyframes skynetRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}";
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(overlay);
+
+  setTimeout(function () {
+    overlay.remove();
+  }, 4000);
+}
+
   window.skynet = {
     results: results,
     recordedActions: recordedActions,
@@ -1131,6 +1196,8 @@
     stopRecording: stopRecording,
     exportRecordedTest: exportRecordedTest,
     copyRecordedTest: copyRecordedTest,
+    terminator: terminatorMode,
+    terminate: terminatorMode,
 
     clearResults: function () {
       results.length = 0;
