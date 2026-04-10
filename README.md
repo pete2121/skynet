@@ -245,6 +245,26 @@ await skynet.get('#terms').shouldBeFalse()
 
 ---
 
+### Visibility & Existence Assertions
+
+#### `await skynet.get(selector).shouldBeVisible()`
+
+Checks if the element is visible in the DOM (not hidden and rendered).
+
+~~~javascript
+await skynet.get('#loginButton').shouldBeVisible()
+~~~
+
+#### `await skynet.get(selector).shouldExist()`
+
+Checks if the element exists in the DOM
+
+~~~javascript
+await skynet.get('#email').shouldExist()
+~~~
+
+---
+
 ### Table Validation
 
 #### `await skynet.table(selector).shouldMatchData(data)`
@@ -264,6 +284,18 @@ Highlights a table visually.
 
 ~~~javascript
 skynet.table('#users').highlight()
+~~~
+
+---
+
+### Visual Assertions
+
+#### `await skynet.get(selector).shouldHaveColor(color)`
+
+Checks if the element has the expected text color.
+
+~~~javascript
+await skynet.get('#title').shouldHaveColor('rgb(255, 0, 0)')
 ~~~
 
 ---

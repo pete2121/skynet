@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com).
 
 ---
 
+## [1.0.2] - 2026-04-10
+
+### Added
+- Exist Assertion
+- Color Assertion
+- Visibility assertion
+
+---
+
 ## [1.0.1] - 2026-03-16
 
 ### Added
