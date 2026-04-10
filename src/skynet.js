@@ -855,6 +855,28 @@
         return this;
       },
 
+      shouldBeVisible: async function () {
+      console.error("❌ FAIL - element not found:", selector);
+
+    addResult("FAIL", "Element " + selector + " should be visible", {
+    expected: "visible",
+    actual: "not found",
+      });
+
+      return this;
+      },
+
+      shouldExist: function () {
+      console.error("❌ FAIL - element does not exist:", selector);
+
+      addResult("FAIL", "Element " + selector + " should exist", {
+      expected: "exists",
+      actual: "not found",
+      });
+
+    return this;  
+    },
+
       shouldHaveText: async function (text) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should have text", {
@@ -979,6 +1001,70 @@
 
         return this;
       },
+
+      shouldBeVisible: async function () {
+      highlightElement(element);
+
+      const style = window.getComputedStyle(element);
+      const visible =
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      element.offsetParent !== null;
+
+    if (visible) {
+      console.log("✅ PASS - element is visible");
+      addResult("PASS", "Element " + selector + " should be visible", true);
+    } else {
+      console.error("❌ FAIL - element not visible");
+
+     const evidence = await captureFailureEvidence(selector, element, {
+      assertion: "shouldBeVisible",
+    });
+
+      addResult("FAIL", "Element " + selector + " should be visible", evidence);
+  }
+
+    return this;
+  },
+
+  shouldHaveColor: async function (expectedColor) {
+  highlightElement(element);
+
+  const style = window.getComputedStyle(element);
+  const actualColor = style.color;
+
+  if (actualColor === expectedColor) {
+    console.log("✅ PASS - color matches:", expectedColor);
+    addResult("PASS", "Element " + selector + " should have color", expectedColor);
+  } else {
+    console.error("❌ FAIL - color mismatch", {
+      expected: expectedColor,
+      actual: actualColor,
+    });
+
+    const evidence = await captureFailureEvidence(selector, element, {
+      expected: expectedColor,
+      actual: actualColor,
+      assertion: "shouldHaveColor",
+    });
+
+    addResult("FAIL", "Element " + selector + " should have color", evidence);
+  }
+
+  return this;
+},
+
+shouldExist: function () {
+  if (element) {
+    console.log("✅ PASS - element exists");
+    addResult("PASS", "Element " + selector + " exists", true);
+  } else {
+    console.error("❌ FAIL - element does not exist");
+    addResult("FAIL", "Element " + selector + " exists", false);
+  }
+
+  return this;
+},
 
       shouldHaveText: async function (text) {
         highlightElement(element);
