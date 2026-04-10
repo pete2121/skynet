@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com).
 - Exist Assertion
 - Color Assertion
 - Visibility assertion
+- Type like user
 
 ---
 

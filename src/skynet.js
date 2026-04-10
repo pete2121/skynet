@@ -846,6 +846,16 @@
         return this;
       },
 
+      typeLikeUser: async function (value, delay) {
+        console.error("❌ FAIL - element not found:", selector);
+        addResult("FAIL", "Element " + selector + " typeLikeUser", {
+          expected: value,
+          delay: delay,
+          actual: "not found",
+      });
+      return this;
+    },
+
       shouldContainText: async function (text) {
         console.error("❌ FAIL - element not found:", selector);
         addResult("FAIL", "Element " + selector + " should contain text", {
@@ -980,6 +990,120 @@
 
         return this;
       },
+
+      typeLikeUser: async function (value, delay = 35) {
+  console.log("Type like user:", value);
+  highlightElement(element);
+
+  if (
+    !element ||
+    !("value" in element) ||
+    element.disabled ||
+    element.readOnly
+  ) {
+    console.error("❌ FAIL - element cannot accept typing:", selector);
+
+    const evidence = await captureFailureEvidence(selector, element, {
+      expected: value,
+      actual: element && "value" in element ? element.value : undefined,
+      assertion: "typeLikeUser",
+      reason: "element cannot accept typing",
+    });
+
+    addResult("FAIL", "Element " + selector + " typeLikeUser", evidence);
+    return this;
+  }
+
+  try {
+    element.focus();
+
+    element.value = "";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+
+    for (const char of String(value)) {
+      const keyCode = char.length === 1 ? char.toUpperCase().charCodeAt(0) : 0;
+
+      element.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: char,
+          code: "Key" + char.toUpperCase(),
+          keyCode: keyCode,
+          which: keyCode,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+
+      element.dispatchEvent(
+        new KeyboardEvent("keypress", {
+          key: char,
+          code: "Key" + char.toUpperCase(),
+          keyCode: keyCode,
+          which: keyCode,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+
+      element.value += char;
+
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+
+      element.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: char,
+          code: "Key" + char.toUpperCase(),
+          keyCode: keyCode,
+          which: keyCode,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+
+      if (delay > 0) {
+        await new Promise(function (resolve) {
+          setTimeout(resolve, delay);
+        });
+      }
+    }
+
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+
+    addResult("PASS", "Element " + selector + " typed like user", {
+      value: value,
+      delay: delay,
+    });
+
+    recordAction({
+      type: "typeLikeUser",
+      selector: selector,
+      value: value,
+      code:
+        "await skynet.get(" +
+        JSON.stringify(selector) +
+        ").typeLikeUser(" +
+        JSON.stringify(value) +
+        ", " +
+        delay +
+        ");",
+    });
+
+    return this;
+  } catch (error) {
+    console.error("❌ FAIL - typeLikeUser failed:", error);
+
+    const evidence = await captureFailureEvidence(selector, element, {
+      expected: value,
+      actual: element.value,
+      assertion: "typeLikeUser",
+      error: String(error),
+    });
+
+    addResult("FAIL", "Element " + selector + " typeLikeUser", evidence);
+    return this;
+  }
+},
 
       shouldContainText: async function (text) {
         highlightElement(element);

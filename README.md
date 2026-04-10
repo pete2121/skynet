@@ -161,11 +161,32 @@ skynet.get('#loginButton').click()
 
 #### `skynet.get(selector).type(value)`
 
-Types a value into an input field.
+Fills an input value quickly by setting the element value programmatically and dispatching `input` / `change` events.
 
 ~~~javascript
 skynet.get('#email').type('test@test.com')
 ~~~
+
+#### `await skynet.get(selector).typeLikeUser(value, delay)`
+
+Simulates keyboard-like typing by dispatching `keydown`, `keypress`, `input`, `keyup`, and `change` events while typing characters one by one.
+
+This is useful for applications that depend on keyboard event handlers and behaves closer to manual typing than `type()`.
+
+Example:
+
+~~~javascript
+await skynet.get('#email').typeLikeUser('test@test.com')
+~~~
+
+With custom delay:
+
+~~~javascript
+await skynet.get('#email').typeLikeUser('test@test.com', 50)
+~~~
+
+Note: `typeLikeUser()` simulates keyboard-style interaction, but synthetic browser events are still not fully identical to trusted real user input.
+
 
 #### `skynet.get(selector).highlight()`
 
